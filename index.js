@@ -10,15 +10,17 @@ var glob = require("glob"),
 //-----------------------
 // CONFIG
 //-----------------------
-var upload_target = 'http://localhost:8080/upload'
+var backend_target = 'http://egcbsc.com:1337/clients';
+var upload_target = 'http://localhost:8080/upload';
+var root_folder = '/Users/felixtioh/Desktop/test';
 
 var currentTS = new Date().getTime();
 
-glob("/Users/felixtioh/Desktop/test/**/*.jpg", options, function (er, files) {
+glob((root_folder + "/**/*.jpg"), options, function (er, files) {
 	if(files && files.length > 0){
 		async.reduce(files, {}, function(memo, filepath, callback){
 			var _reversed = filepath.split(/\/|\\/).reverse();
-			var name = _reversed[4].trim();
+			var name = _reversed[4].trim().toUpperCase();
 			var is_profile = false;
 			if(_reversed[1].trim() == 'Profile'){
 				is_profile = true;
@@ -44,7 +46,6 @@ glob("/Users/felixtioh/Desktop/test/**/*.jpg", options, function (er, files) {
 				.field('timestamp', timestamp)
 				.attach('image', filepath)
 				.end(function(res){
-					console.log(res.body);
 					original_picture = res.body.original;
 					sized_picture = res.body.sized;
 					square_picture = res.body.square;
@@ -89,6 +90,69 @@ glob("/Users/felixtioh/Desktop/test/**/*.jpg", options, function (er, files) {
 				clientMapSorted[k] = temp;
 			});
 			console.log(clientMapSorted);
+			_.each(clientMapSorted, function(v,k,list){
+				var last_session = null;
+				var last_session_index = 0;
+				var sessions = [];
+				var photos = [];
+				var profile_pic = {
+					temp: 'images/profile.png',
+					original: null,
+					sized: null,
+					square: null,
+					large: null
+				};
+				_.each(v, function(el, kk){
+					if(el.date_taken != last_session){
+						last_session = el.date_taken;
+						last_session_index += 1;
+						sessions.push({
+							date: el.date_taken,
+							treatment_improvement: '',
+							service: ''
+						});
+					}
+					photos.push({
+						taken_for: el.taken_for,
+						session: last_session_index.toString(),
+						angle: '',
+						date_taken: el.date_taken,
+						timestamp: el.timestamp,
+						temp_path: '',
+						original_picture: el.original_picture,
+						sized_picture: el.sized_picture,
+						square_picture: el.square_picture,
+						large_picture: el.large_picture,
+						index: kk.toString()
+					});
+					if(el.is_profile){
+						profile_pic.original = el.original_picture;
+						profile_pic.sized = el.sized_picture;
+						profile_pic.square = el.square_picture;
+						profile_pic.large = el.large_picture;
+					}
+				});
+				console.log('====================');
+				//console.log(k);
+				//console.log(sessions);
+				//console.log(photos);
+				var client = {
+					Id: k,
+					name: k,
+					client_name: k,
+					profile_pic: profile_pic,
+					photos: photos,
+					sessions: sessions
+				};
+				console.log(client);
+				agent
+					.post(backend_target + '/' + k)
+					.send(client)
+					.end(function(res){
+						console.log(res);
+					});
+
+			}); // after _.each(clientMapSorted)
 		}); // end async
 	} // end if files
 }); // end glob
