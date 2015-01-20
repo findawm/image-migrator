@@ -35,6 +35,10 @@ glob((root_folder + "/**/*.jpg"), options, function (er, files) {
 			if(_parts[0] == 'vAfter'){
 				taken_for = 'After';
 			}
+			if(!parts[1]){
+				callback(null, memo);
+				return;
+			}
 			var date_taken = _parts[1].replace(/-/g, '.');
 			var original_picture = null;
 			var sized_picture = null;
